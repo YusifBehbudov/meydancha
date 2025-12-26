@@ -1,0 +1,135 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String
+  role      String   @default("PLAYER") // PLAYER, OWNER, ADMIN
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  fields     Field[]
+  bookings   Booking[]
+  reviews    Review[]
+  complaints Complaint[]
+}
+
+model Field {
+  id           String   @id @default(cuid())
+  name         String
+  sportType    String // football, basketball, padel, tennis
+  city         String
+  address      String
+  pricePerHour Float
+  ratingAvg    Float    @default(0)
+  ratingCount  Int      @default(0)
+  ownerId      String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  owner    User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  bookings Booking[]
+  reviews  Review[]
+
+  @@index([sportType])
+  @@index([city])
+  @@index([ownerId])
+}
+
+model Booking {
+  id         String   @id @default(cuid())
+  fieldId    String
+  userId     String
+  date       DateTime
+  startTime  String // Format: "HH:mm"
+  endTime    String // Format: "HH:mm"
+  totalPrice Float
+  status     String   @default("CONFIRMED") // CONFIRMED, CANCELLED
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  field     Field      @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reminders Reminder[]
+
+  @@index([fieldId])
+  @@index([userId])
+  @@index([date])
+  @@index([status])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  fieldId   String
+  userId    String
+  rating    Int // 1-5
+  comment   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  field Field @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([fieldId, userId])
+  @@index([fieldId])
+  @@index([userId])
+}
+
+model Reminder {
+  id        String    @id @default(cuid())
+  bookingId String
+  type      String // "email" or "sms"
+  sent      Boolean   @default(false)
+  sentAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  // Relations
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+  @@index([sent])
+}
+
+model Complaint {
+  id        String   @id @default(cuid())
+  userId    String
+  subject   String
+  message   String
+  status    String   @default("pending") // pending, resolved
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+}
+
+model Campaign {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  startDate   DateTime
+  endDate     DateTime
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([active])
+}
